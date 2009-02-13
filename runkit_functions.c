@@ -52,7 +52,7 @@ static void php_runkit_hash_key_dtor(zend_hash_key *hash_key)
 
 /* {{{ php_runkit_fetch_function
  */
-static int php_runkit_fetch_function(int fname_type, char *fname, int fname_len, zend_function **pfe, int flag TSRMLS_DC)
+static int php_runkit_fetch_function(int fname_type, char *fname, size_t fname_len, zend_function **pfe, int flag TSRMLS_DC)
 {
 	zend_function *fe;
 
@@ -95,7 +95,7 @@ static int php_runkit_fetch_function(int fname_type, char *fname, int fname_len,
 
 			if (!RUNKIT_G(misplaced_internal_functions)) {
 				ALLOC_HASHTABLE(RUNKIT_G(misplaced_internal_functions));
-				zend_hash_init(RUNKIT_G(misplaced_internal_functions), 4, NULL, php_runkit_hash_key_dtor, 0);
+				zend_hash_init(RUNKIT_G(misplaced_internal_functions), 4, NULL, (dtor_func_t)php_runkit_hash_key_dtor, 0);
 			}
 			hash_key.nKeyLength = fname_len + 1;
 			PHP_RUNKIT_HASH_KEY(&hash_key) = estrndup(fname, PHP_RUNKIT_HASH_KEYLEN(&hash_key));
@@ -253,8 +253,6 @@ int php_runkit_destroy_misplaced_functions(zend_hash_key *hash_key TSRMLS_DC)
 	Cleanup after modifications to internal functions */
 int php_runkit_restore_internal_functions(zend_internal_function *fe, int num_args, va_list args, zend_hash_key *hash_key)
 {
-	void ***tsrm_ls = va_arg(args, void***); /* NULL when !defined(ZTS) */
-
 	if (!hash_key->nKeyLength) {
 		/* Nonsense, skip it */
 		return ZEND_HASH_APPLY_REMOVE;
@@ -468,7 +466,7 @@ PHP_FUNCTION(runkit_function_copy)
 		PHP_RUNKIT_HASH_KEY(&hash_key) = estrndup(dfunc, PHP_RUNKIT_HASH_KEYLEN(&hash_key));
 		if (!RUNKIT_G(misplaced_internal_functions)) {
 			ALLOC_HASHTABLE(RUNKIT_G(misplaced_internal_functions));
-			zend_hash_init(RUNKIT_G(misplaced_internal_functions), 4, NULL, php_runkit_hash_key_dtor, 0);
+			zend_hash_init(RUNKIT_G(misplaced_internal_functions), 4, NULL, (dtor_func_t)php_runkit_hash_key_dtor, 0);
 		}
 		zend_hash_next_index_insert(RUNKIT_G(misplaced_internal_functions), (void*)&hash_key, sizeof(zend_hash_key), NULL);
 	}

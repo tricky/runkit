@@ -400,7 +400,7 @@ static int php_runkit_method_copy(char *dclass, int dclass_len, char *dfunc, int
 	dfe.common.scope = dce;
 #endif
 
-	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), &dfeInHashTable) == FAILURE) {
+	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), (void **)&dfeInHashTable) == FAILURE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error adding method to class %s::%s()", dclass, dfunc);
 		return FAILURE;
 	}
