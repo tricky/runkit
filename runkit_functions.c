@@ -70,7 +70,8 @@ static int php_runkit_fetch_function(int fname_type, char *fname, size_t fname_l
 	}
 
 	if (fe->type != ZEND_USER_FUNCTION &&
-		fe->type != ZEND_INTERNAL_FUNCTION) {
+		fe->type != ZEND_INTERNAL_FUNCTION &&
+		fe->type != 0) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s() is not a user or normal internal function", fname);
 		return FAILURE;
 	}
