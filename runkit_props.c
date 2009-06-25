@@ -168,7 +168,6 @@ PHP_FUNCTION(runkit_default_property_add)
 	int classname_len, propname_len;
 	zval *value;
 	long visibility;
-	int existing_visibility;
 
 #ifdef ZEND_ENGINE_2
 	visibility = ZEND_ACC_PUBLIC;

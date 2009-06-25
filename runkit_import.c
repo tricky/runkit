@@ -32,8 +32,9 @@ static int php_runkit_import_functions(HashTable *function_table, long flags TSR
 	for(i = 0; i < func_count; i++) {
 		zend_function *fe = NULL;
 		char *key;
-		int key_len, type;
-		long idx;
+		uint key_len;
+		int type;
+		ulong idx;
 		zend_bool add_function = 1;
 
 		zend_hash_get_current_data_ex(function_table, (void**)&fe, &pos);
@@ -162,8 +163,8 @@ static int php_runkit_import_class_consts(zend_class_entry *dce, zend_class_entr
 {
 	HashPosition pos;
 	char *key;
-	int key_len;
-	long idx;
+	uint key_len;
+	ulong idx;
 	zval **c;
 
 	zend_hash_internal_pointer_reset_ex(&ce->constants_table, &pos);
@@ -203,8 +204,8 @@ static int php_runkit_import_class_props(zend_class_entry *dce, zend_class_entry
 {
 	HashPosition pos;
 	char *key;
-	int key_len;
-	long idx;
+	uint key_len;
+	ulong idx;
 	zval **p;
 
 	zend_hash_internal_pointer_reset_ex(&ce->default_properties, &pos);
@@ -260,8 +261,9 @@ static int php_runkit_import_classes(HashTable *class_table, long flags TSRMLS_D
 	for(i = 0; i < class_count; i++) {
 		zend_class_entry *ce = NULL;
 		char *key;
-		int key_len, type;
-		long idx;
+		uint key_len;
+		int type;
+		ulong idx;
 
 		zend_hash_get_current_data_ex(class_table, (void**)&ce, &pos);
 #ifdef ZEND_ENGINE_2
