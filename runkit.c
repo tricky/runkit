@@ -103,6 +103,10 @@ function_entry runkit_functions[] = {
 	PHP_FE(runkit_method_rename,									NULL)
 	PHP_FE(runkit_method_copy,										NULL)
 
+	PHP_FE(runkit_function_delete_callback,							NULL)
+	PHP_FE(runkit_function_set_callback,							NULL)
+	PHP_FE(runkit_function_callback_proxy,							NULL)
+
 #ifdef PHP_RUNKIT_CLASSKIT_COMPAT
 	PHP_FALIAS(classkit_method_add,			runkit_method_add,		NULL)
 	PHP_FALIAS(classkit_method_redefine,	runkit_method_redefine,	NULL)
@@ -172,6 +176,8 @@ static void php_runkit_globals_ctor(zend_runkit_globals *runkit_global TSRMLS_DC
 #ifdef PHP_RUNKIT_MANIPULATION
 	runkit_global->replaced_internal_functions = NULL;
 	runkit_global->misplaced_internal_functions = NULL;
+	runkit_global->intercept_callbacks = NULL;
+	runkit_global->intercept_orig_functions = NULL;
 #endif
 }
 
@@ -343,6 +349,8 @@ no_superglobals_defined:
 #ifdef PHP_RUNKIT_MANIPULATION
 	RUNKIT_G(replaced_internal_functions) = NULL;
 	RUNKIT_G(misplaced_internal_functions) = NULL;
+	RUNKIT_G(intercept_callbacks) = NULL;
+	RUNKIT_G(intercept_orig_functions) = NULL;
 #endif
 
 	return SUCCESS;
@@ -388,6 +396,18 @@ PHP_RSHUTDOWN_FUNCTION(runkit)
 		zend_hash_destroy(RUNKIT_G(replaced_internal_functions));
 		FREE_HASHTABLE(RUNKIT_G(replaced_internal_functions));
 		RUNKIT_G(replaced_internal_functions) = NULL;
+	}
+
+	if (RUNKIT_G(intercept_callbacks)) {
+		zend_hash_destroy(RUNKIT_G(intercept_callbacks));
+		FREE_HASHTABLE(RUNKIT_G(intercept_callbacks));
+		RUNKIT_G(intercept_callbacks) = NULL;
+	}
+
+	if (RUNKIT_G(intercept_orig_functions)) {
+		zend_hash_destroy(RUNKIT_G(intercept_orig_functions));
+		FREE_HASHTABLE(RUNKIT_G(intercept_orig_functions));
+		RUNKIT_G(intercept_orig_functions) = NULL;
 	}
 #endif /* PHP_RUNKIT_MANIPULATION */
 

@@ -96,6 +96,9 @@ PHP_FUNCTION(runkit_default_property_add);
 PHP_FUNCTION(runkit_class_emancipate);
 PHP_FUNCTION(runkit_class_adopt);
 PHP_FUNCTION(runkit_import);
+PHP_FUNCTION(runkit_function_delete_callback);
+PHP_FUNCTION(runkit_function_set_callback);
+PHP_FUNCTION(runkit_function_callback_proxy);
 #endif /* PHP_RUNKIT_MANIPULATION */
 
 #ifdef PHP_RUNKIT_SANDBOX
@@ -117,6 +120,8 @@ ZEND_BEGIN_MODULE_GLOBALS(runkit)
 	HashTable *misplaced_internal_functions;
 	HashTable *replaced_internal_functions;
 	zend_bool internal_override;
+	HashTable *intercept_callbacks;
+	HashTable *intercept_orig_functions;
 #endif
 ZEND_END_MODULE_GLOBALS(runkit)
 
