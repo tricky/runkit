@@ -173,7 +173,7 @@ int php_runkit_fetch_interface(char *classname, int classname_len, zend_class_en
 #define PHP_RUNKIT_DECL_STRING_PARAM(p)			char *p; int p##_len;
 #define PHP_RUNKIT_STRING_SPEC					"s"
 #define PHP_RUNKIT_STRING_PARAM(p)				&p, &p##_len
-#define PHP_RUNKIT_STRTOLOWER(p)				php_strtolower(&p, &p##_len)
+#define PHP_RUNKIT_STRTOLOWER(p)				php_strtolower(p, p##_len)
 #define PHP_RUNKIT_STRING_LEN(param,addtl)		(param##_len + (addtl))
 #define PHP_RUNKIT_STRING_TYPE(param)			IS_STRING
 #define PHP_RUNKIT_HASH_FIND(hash,param,ppvar)	zend_hash_find(hash, param, param##_len + 1, (void**)ppvar)
@@ -188,7 +188,7 @@ zend_class_entry *_php_runkit_locate_scope(zend_class_entry *ce, zend_function *
 #define PHP_RUNKIT_DECL_STRING_PARAM(p)			char *p; int p##_len;
 #define PHP_RUNKIT_STRING_SPEC					"s"
 #define PHP_RUNKIT_STRING_PARAM(p)				&p, &p##_len
-#define PHP_RUNKIT_STRTOLOWER(p)				php_strtolower(&p, &p##_len)
+#define PHP_RUNKIT_STRTOLOWER(p)				php_strtolower(p, p##_len)
 #define PHP_RUNKIT_STRING_LEN(param,addtl)		(param##_len + (addtl))
 #define PHP_RUNKIT_STRING_TYPE(param)			IS_STRING
 #define PHP_RUNKIT_HASH_FIND(hash,param,ppvar)	zend_hash_find(hash, param, param##_len + 1, (void**)ppvar)
