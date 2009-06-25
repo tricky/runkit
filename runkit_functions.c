@@ -598,7 +598,7 @@ PHP_FUNCTION(runkit_function_set_callback)
 	zval *cb;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
-			PHP_RUNKIT_STRING_SPEC "z", 
+			PHP_RUNKIT_STRING_SPEC "z",
 			PHP_RUNKIT_STRING_PARAM(ifunc),
 			&cb) == FAILURE) {
 		RETURN_FALSE;
