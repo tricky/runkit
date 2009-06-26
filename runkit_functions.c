@@ -558,7 +558,10 @@ static void runkit_intercept_orig_func_dtor(zend_function *fe) {
 		proxy_func = proxyfe->common.function_name;
 	}
 
-	if (zend_hash_update(EG(function_table), func, func_len + 1, fe, sizeof(*fe), NULL) == FAILURE) {
+	if (fe->type == 0) {
+		zend_hash_del(EG(function_table), func, func_len + 1);
+		efree(fe->common.function_name);
+	} else if (zend_hash_update(EG(function_table), func, func_len + 1, fe, sizeof(*fe), NULL) == FAILURE) {
 		return;
 	}
 
@@ -595,19 +598,13 @@ PHP_FUNCTION(runkit_function_set_callback)
 {
 	PHP_RUNKIT_DECL_STRING_PARAM(ifunc);
 	zend_function *ife = NULL, *proxyfe = NULL;
+	zend_function dummy_fe;
 	zval *cb;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
 			PHP_RUNKIT_STRING_SPEC "z",
 			PHP_RUNKIT_STRING_PARAM(ifunc),
 			&cb) == FAILURE) {
-		RETURN_FALSE;
-	}
-
-	// would use the normal fetch, but then we couldn't redefine callbacks
-	// if modifying internal functions is disabled
-	if (!zend_hash_exists(EG(function_table), ifunc, ifunc_len + 1)) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Undefined function %s()", ifunc);
 		RETURN_FALSE;
 	}
 
@@ -634,11 +631,14 @@ PHP_FUNCTION(runkit_function_set_callback)
 
 	zend_hash_del(RUNKIT_G(intercept_orig_functions), ifunc, ifunc_len + 1);
 	if (zend_hash_find(EG(function_table), ifunc, ifunc_len + 1, (void **)&ife) == FAILURE) {
-		php_error_docref(NULL TSRMLS_CC, E_ERROR, "Undefined function %s()", ifunc);
+		ife = &dummy_fe;
+		ife->type = 0;
+		ife->common.function_name = estrndup(ifunc, ifunc_len);
 	}
 
 	if (zend_hash_add(RUNKIT_G(intercept_orig_functions), ifunc, ifunc_len + 1, ife, sizeof(*ife), NULL) == SUCCESS) {
-		PHP_RUNKIT_FUNCTION_ADD_REF(ife);
+		if (ife->type != 0)
+			PHP_RUNKIT_FUNCTION_ADD_REF(ife);
 	}
 
 	ZVAL_ADDREF(cb);
