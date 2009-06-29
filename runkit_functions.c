@@ -510,10 +510,14 @@ PHP_FUNCTION(runkit_function_callback_proxy)
 
 	func = get_active_function_name(TSRMLS_C);
 	func_len = strlen(func);
+	func = zend_str_tolower_dup(func, func_len);
+	PHP_RUNKIT_STRTOLOWER(func);
 	if (zend_hash_find(RUNKIT_G(intercept_callbacks), func, func_len + 1, (void **)&cb) == FAILURE) {
+		efree(func);
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "No callback defined for %s()", func);
 		RETURN_FALSE;
 	}
+	efree(func);
 
 	argv = (zval ***) safe_emalloc(sizeof(zval **), argc, 0);
 	if (zend_get_parameters_array_ex(ZEND_NUM_ARGS(), argv) == FAILURE) {
@@ -549,9 +553,12 @@ static void runkit_intercept_orig_func_dtor(zend_function *fe) {
 	char *func = fe->common.function_name;
 	size_t func_len = strlen(func);
 
+	char *lcfunc = zend_str_tolower_dup(func, func_len);
+	size_t lcfunc_len = func_len;
+
 	char *proxy_func = NULL;
 
-	zend_hash_find(EG(function_table), func, func_len + 1, (void **)&proxyfe);
+	zend_hash_find(EG(function_table), lcfunc, lcfunc_len + 1, (void **)&proxyfe);
 	/* We explicitely allocated a new function name. The function_table has a
 	   destructor, but it does not destroy builtins. Be defensive. */
 	if (proxyfe && proxyfe->type == ZEND_INTERNAL_FUNCTION) {
@@ -559,12 +566,14 @@ static void runkit_intercept_orig_func_dtor(zend_function *fe) {
 	}
 
 	if (fe->type == 0) {
-		zend_hash_del(EG(function_table), func, func_len + 1);
+		zend_hash_del(EG(function_table), lcfunc, lcfunc_len + 1);
 		efree(fe->common.function_name);
-	} else if (zend_hash_update(EG(function_table), func, func_len + 1, fe, sizeof(*fe), NULL) == FAILURE) {
+	} else if (zend_hash_update(EG(function_table), lcfunc, lcfunc_len + 1, fe, sizeof(*fe), NULL) == FAILURE) {
+		efree(lcfunc);
 		return;
 	}
 
+	efree(lcfunc);
 	if (proxy_func) {
 		efree(proxy_func);
 	}
@@ -576,7 +585,7 @@ PHP_FUNCTION(runkit_function_delete_callback)
 {
 	PHP_RUNKIT_DECL_STRING_PARAM(ifunc);
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
-		PHP_RUNKIT_STRING_SPEC,
+		PHP_RUNKIT_STRING_SPEC "/",
 		PHP_RUNKIT_STRING_PARAM(ifunc)) == FAILURE) {
 		WRONG_PARAM_COUNT;
 	}
@@ -585,6 +594,7 @@ PHP_FUNCTION(runkit_function_delete_callback)
 		RETURN_FALSE;
 	}
 
+	PHP_RUNKIT_STRTOLOWER(ifunc);
 	int rv1 = zend_hash_del(RUNKIT_G(intercept_orig_functions), ifunc, ifunc_len + 1);
 	int rv2 = zend_hash_del(RUNKIT_G(intercept_callbacks), ifunc, ifunc_len + 1);
 
@@ -597,6 +607,7 @@ PHP_FUNCTION(runkit_function_delete_callback)
 PHP_FUNCTION(runkit_function_set_callback)
 {
 	PHP_RUNKIT_DECL_STRING_PARAM(ifunc);
+	PHP_RUNKIT_DECL_STRING_PARAM(lcifunc);
 	zend_function *ife = NULL, *proxyfe = NULL;
 	zend_function dummy_fe;
 	zval *cb;
@@ -608,13 +619,18 @@ PHP_FUNCTION(runkit_function_set_callback)
 		RETURN_FALSE;
 	}
 
+	lcifunc = zend_str_tolower_dup(ifunc, ifunc_len);
+	lcifunc_len = ifunc_len;
+
 	if (!zend_is_callable(cb, 0, NULL)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s() expects second argument to be a valid callback or null", get_active_function_name(TSRMLS_C));
+		efree(lcifunc);
 		RETURN_FALSE;
 	}
 
 	if (zend_hash_find(EG(function_table), "runkit_function_callback_proxy", sizeof("runkit_function_callback_proxy"), (void **)&proxyfe) == FAILURE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to find callback proxy function %s()", "runkit_function_callback_proxy");
+		efree(lcifunc);
 		RETURN_FALSE;
 	}
 
@@ -629,35 +645,38 @@ PHP_FUNCTION(runkit_function_set_callback)
 		zend_hash_init(RUNKIT_G(intercept_callbacks), 4, NULL, ZVAL_PTR_DTOR, 0);
 	}
 
-	zend_hash_del(RUNKIT_G(intercept_orig_functions), ifunc, ifunc_len + 1);
-	if (zend_hash_find(EG(function_table), ifunc, ifunc_len + 1, (void **)&ife) == FAILURE) {
+	zend_hash_del(RUNKIT_G(intercept_orig_functions), lcifunc, lcifunc_len + 1);
+	if (zend_hash_find(EG(function_table), lcifunc, lcifunc_len + 1, (void **)&ife) == FAILURE) {
 		ife = &dummy_fe;
 		ife->type = 0;
 		ife->common.function_name = estrndup(ifunc, ifunc_len);
 	}
 
-	if (zend_hash_add(RUNKIT_G(intercept_orig_functions), ifunc, ifunc_len + 1, ife, sizeof(*ife), NULL) == SUCCESS) {
+	if (zend_hash_add(RUNKIT_G(intercept_orig_functions), lcifunc, lcifunc_len + 1, ife, sizeof(*ife), NULL) == SUCCESS) {
 		if (ife->type != 0)
 			PHP_RUNKIT_FUNCTION_ADD_REF(ife);
 	}
 
 	ZVAL_ADDREF(cb);
 	SEPARATE_ZVAL(&cb);
-	if (zend_hash_update(RUNKIT_G(intercept_callbacks), ifunc, ifunc_len + 1, &cb, sizeof(cb), NULL) == FAILURE) {
+	if (zend_hash_update(RUNKIT_G(intercept_callbacks), lcifunc, lcifunc_len + 1, &cb, sizeof(cb), NULL) == FAILURE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add callback for %s()", ifunc);
 		zval_ptr_dtor(&cb);
+		efree(lcifunc);
 		RETURN_FALSE;
 	}
 
 
-	if (zend_hash_update(EG(function_table), ifunc, ifunc_len + 1, proxyfe, sizeof(*proxyfe), (void **)&proxyfe) == FAILURE) {
+	if (zend_hash_update(EG(function_table), lcifunc, lcifunc_len + 1, proxyfe, sizeof(*proxyfe), (void **)&proxyfe) == FAILURE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to define proxy alias for %s()", ifunc);
 		zval_ptr_dtor(&cb);
+		efree(lcifunc);
 		RETURN_FALSE;
 	}
 	proxyfe->common.function_name = estrndup(ifunc, ifunc_len);
 	PHP_RUNKIT_FUNCTION_ADD_REF(proxyfe);
 
+	efree(lcifunc);
 	RETURN_TRUE;
 }
 
